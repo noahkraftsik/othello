@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Othello.com</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <style>
+        body {
+            background-color: #312e2b; /* Gris Chess.com */
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 { color: #81b64c; margin-bottom: 10px; }
+        #canvas-container {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas { display: block; cursor: pointer; }
+        .footer { margin-top: 15px; font-size: 0.8em; opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+    <h1>Othello.com</h1>
+    
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="footer">Développé en Python avec Pygame-Web</div>
+
+    <script type="text/python">
+import pygame
+import sys
+
+# Configuration identique à ton jeu
+LARGEUR, HAUTEUR = 400, 450
+GRIS_FONCE = (49, 46, 43)
+VERT_CHESS = (129, 182, 76)
+BLANC = (255, 255, 255)
+NOIR = (0, 0, 0)
+OR = (255, 215, 0)
+
+pygame.init()
+fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
+font = pygame.font.SysFont("Arial", 20)
+
+plateau = [[0]*8 for _ in range(8)]
+tour = 1
+partie_finie = False
+etat_jeu = "MENU"
+historique = []
+
+def reinitialiser():
+    global plateau, tour, partie_finie, historique
+    plateau = [[0]*8 for _ in range(8)]
+    plateau[3][3], plateau[4][4] = 2, 2
+    plateau[3][4], plateau[4][3] = 1, 1
+    tour, partie_finie, historique = 1, False, []
+
+def obtenir_captures(p, ligne, col, couleur):
+    if not (0 <= ligne < 8 and 0 <= col < 8) or p[ligne][col] != 0: return []
+    adversaire = 2 if couleur == 1 else 1
+    directions = [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]
+    total = []
+    for dL, dC in directions:
+        l, c = ligne + dL, col + dC
+        chemin = []
+        while 0 <= l < 8 and 0 <= c < 8 and p[l][c] == adversaire:
+            chemin.append((l, c)); l += dL; c += dC
+        if 0 <= l < 8 and 0 <= c < 8 and p[l][c] == couleur: total.extend(chemin)
+    return total
+
+def dessiner():
+    if etat_jeu == "MENU":
+        pygame.draw.rect(fenetre, GRIS_FONCE, (0, 0, 400, 450))
+        txt = font.render("Othello.com", True, BLANC)
+        fenetre.blit(txt, (200 - txt.get_width()//2, 100))
+        pygame.draw.rect(fenetre, VERT_CHESS, (100, 200, 200, 60))
+        btn = font.render("JOUER", True, BLANC)
+        fenetre.blit(btn, (200 - btn.get_width()//2, 215))
+    else:
+        pygame.draw.rect(fenetre, (38, 37, 34), (0, 0, 400, 50))
+        pygame.draw.rect(fenetre, (34, 139, 34), (0, 50, 400, 400))
+        n, b = 0, 0
+        for l in range(8):
+            for c in range(8):
+                pygame.draw.rect(fenetre, NOIR, (c*50, l*50+50, 50, 50), 1)
+                if plateau[l][c] != 0:
+                    couleur = NOIR if plateau[l][c] == 1 else BLANC
+                    if plateau[l][c] == 1: n += 1
+                    else: b += 1
+                    pygame.draw.circle(fenetre, couleur, (c*50+25, l*50+75), 18)
+                elif not partie_finie and obtenir_captures(plateau, l, c, tour):
+                    pygame.draw.circle(fenetre, (100, 100, 100), (c*50+25, l*50+75), 5)
+        
+        info = f"N: {n} B: {b} | " + ("FIN" if partie_finie else f"TOUR: {'NOIR' if tour==1 else 'BLANC'}")
+        fenetre.blit(font.render(info, True, BLANC), (15, 15))
+    pygame.display.flip()
+
+reinitialiser()
+while True:
+    dessiner()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT: sys.exit()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            pos = pygame.mouse.get_pos()
+            if etat_jeu == "MENU" and 100 < pos[0] < 300 and 200 < pos[1] < 260:
+                etat_jeu = "JEU"
+            elif etat_jeu == "JEU":
+                c, l = pos[0]//50, (pos[1]-50)//50
+                caps = obtenir_captures(plateau, l, c, tour)
+                if caps:
+                    plateau[l][c] = tour
+                    for rl, rc in caps: plateau[rl][rc] = tour
+                    tour = 2 if tour == 1 else 1
+    </script>
+</body>
+</html>
