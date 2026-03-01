@@ -6,101 +6,76 @@
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
     <style>
-        body {
-            background-color: #312e2b;
-            color: white;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        h1 { color: #81b64c; }
-        #loading-msg { color: #81b64c; margin-bottom: 10px; }
-        canvas { border: 2px solid #1a1918; border-radius: 5px; }
+        body { background-color: #312e2b; color: white; text-align: center; font-family: sans-serif; }
+        #loading-msg { color: #81b64c; margin: 20px; font-weight: bold; }
+        canvas { border: 5px solid #1a1918; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
-
     <h1>Othello.com</h1>
-    <p id="loading-msg">Chargement du plateau...</p>
-    
+    <div id="loading-msg">Moteur en cours de préparation...</div>
     <canvas id="canvas"></canvas>
 
     <script type="py" config='{"packages": ["pygame-ce"]}'>
-import js
 import pygame
 import asyncio
+import js
 
-# On cache le message de chargement quand c'est prêt
+# On supprime le message une fois que Pygame est chargé
 js.document.getElementById("loading-msg").style.display = "none"
 
-# --- CONFIGURATION ---
-LARGEUR, HAUTEUR = 400, 400
 pygame.init()
+L = 400
+screen = pygame.display.set_mode((L, L))
 
-# CETTE LIGNE EST LA PLUS IMPORTANTE POUR LE WEB :
-fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
+# 0=vide, 1=noir, 2=blanc
+board = [[0]*8 for _ in range(8)]
+board[3][3], board[4][4] = 2, 2
+board[3][4], board[4][3] = 1, 1
+turn = 1
 
-# Variables du jeu
-plateau = [[0]*8 for _ in range(8)]
-plateau[3][3], plateau[4][4] = 2, 2
-plateau[3][4], plateau[4][3] = 1, 1
-tour = 1
-
-def obtenir_captures(p, ligne, col, couleur):
-    if p[ligne][col] != 0: return []
-    adversaire = 2 if couleur == 1 else 1
-    directions = [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]
+def get_moves(p, r, c, color):
+    if p[r][c] != 0: return []
+    opp = 2 if color == 1 else 1
+    dirs = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
     total = []
-    for dL, dC in directions:
-        l, c = ligne + dL, col + dC
-        chemin = []
-        while 0 <= l < 8 and 0 <= c < 8 and p[l][c] == adversaire:
-            chemin.append((l, c)); l += dL; c += dC
-        if 0 <= l < 8 and 0 <= c < 8 and p[l][c] == couleur:
-            total.extend(chemin)
+    for dr, dc in dirs:
+        nr, nc = r+dr, c+dc
+        path = []
+        while 0<=nr<8 and 0<=nc<8 and p[nr][nc] == opp:
+            path.append((nr, nc))
+            nr+=dr; nc+=dc
+        if 0<=nr<8 and 0<=nc<8 and p[nr][nc] == color:
+            total.extend(path)
     return total
 
-def dessiner():
-    # Fond vert Othello
-    fenetre.fill((34, 139, 34))
-    for l in range(8):
-        for c in range(8):
-            # Grillage
-            pygame.draw.rect(fenetre, (20, 20, 20), (c*50, l*50, 50, 50), 1)
-            # Pions
-            if plateau[l][c] == 1:
-                pygame.draw.circle(fenetre, (0,0,0), (c*50+25, l*50+25), 20)
-            elif plateau[l][c] == 2:
-                pygame.draw.circle(fenetre, (255,255,255), (c*50+25, l*50+25), 20)
-            # Indices
-            elif obtenir_captures(plateau, l, c, tour):
-                pygame.draw.circle(fenetre, (60, 110, 60), (c*50+25, l*50+25), 6)
-    pygame.display.flip()
-
 async def main():
-    global tour
+    global turn
     while True:
-        dessiner()
+        screen.fill((34, 139, 34)) # Vert Othello
+        for r in range(8):
+            for c in range(8):
+                pygame.draw.rect(screen, (20,20,20), (c*50, r*50, 50, 50), 1)
+                if board[r][c] == 1:
+                    pygame.draw.circle(screen, (0,0,0), (c*50+25, r*50+25), 20)
+                elif board[r][c] == 2:
+                    pygame.draw.circle(screen, (255,255,255), (c*50+25, r*50+25), 20)
+                elif get_moves(board, r, c, turn):
+                    pygame.draw.circle(screen, (50, 90, 50), (c*50+25, r*50+25), 5)
+        
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
-                c, l = x // 50, y // 50
-                if 0 <= l < 8 and 0 <= c < 8:
-                    caps = obtenir_captures(plateau, l, c, tour)
-                    if caps:
-                        plateau[l][c] = tour
-                        for rl, rc in caps:
-                            plateau[rl][rc] = tour
-                        tour = 2 if tour == 1 else 1
+                c, r = x//50, y//50
+                caps = get_moves(board, r, c, turn)
+                if caps:
+                    board[r][c] = turn
+                    for cr, cc in caps: board[cr][cc] = turn
+                    turn = 2 if turn == 1 else 1
         
-        # Très important pour ne pas bloquer le navigateur
-        await asyncio.sleep(0.01)
+        pygame.display.flip()
+        await asyncio.sleep(0.02)
 
-# Lancement de la boucle
 asyncio.ensure_future(main())
     </script>
 </body>
