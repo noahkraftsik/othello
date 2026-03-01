@@ -46,9 +46,10 @@
         <canvas id="canvas"></canvas>
     </div>
 
-    <script type="py">
+<script type="py" config='{"packages": ["pygame-ce"]}'>
 import js
 import pygame
+import asyncio
 import sys
 
 # On prévient le navigateur que le chargement est fini
@@ -61,8 +62,6 @@ BLANC = (255, 255, 255)
 NOIR = (0, 0, 0)
 
 pygame.init()
-# On cible le canvas HTML
-canvas_element = js.document.getElementById("canvas")
 fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
 font = pygame.font.SysFont("Arial", 20)
 
@@ -80,18 +79,14 @@ def obtenir_captures(p, ligne, col, couleur):
         l, c = ligne + dL, col + dC
         chemin = []
         while 0 <= l < 8 and 0 <= c < 8 and p[l][c] == adversaire:
-            chemin.append((l, c))
-            l += dL; c += dC
+            chemin.append((l, c)); l += dL; c += dC
         if 0 <= l < 8 and 0 <= c < 8 and p[l][c] == couleur:
             total.extend(chemin)
     return total
 
 def dessiner():
-    # Fond
     pygame.draw.rect(fenetre, (38, 37, 34), (0, 0, 400, 50))
     pygame.draw.rect(fenetre, (34, 139, 34), (0, 50, 400, 400))
-    
-    # Plateau et Pions
     for l in range(8):
         for c in range(8):
             pygame.draw.rect(fenetre, (20, 20, 20), (c*50, l*50+50, 50, 50), 1)
@@ -101,12 +96,10 @@ def dessiner():
                 pygame.draw.circle(fenetre, BLANC, (c*50+25, l*50+75), 18)
             elif obtenir_captures(plateau, l, c, tour):
                 pygame.draw.circle(fenetre, (100, 100, 100), (c*50+25, l*50+75), 4)
-
     txt = f"TOUR: {'NOIR' if tour==1 else 'BLANC'}"
     fenetre.blit(font.render(txt, True, VERT_CHESS), (150, 15))
     pygame.display.flip()
 
-# Boucle de jeu pour le Web
 async def main():
     global tour
     while True:
@@ -119,16 +112,13 @@ async def main():
                     caps = obtenir_captures(plateau, l, c, tour)
                     if caps:
                         plateau[l][c] = tour
-                        for rl, rc in caps:
-                            plateau[rl][rc] = tour
+                        for rl, rc in caps: plateau[rl][rc] = tour
                         tour = 2 if tour == 1 else 1
-        
-        import asyncio
         await asyncio.sleep(0)
 
-import asyncio
 asyncio.ensure_future(main())
     </script>
 </body>
 </html>
+
 
