@@ -2,17 +2,14 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Othello.com</title>
-    
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
-
     <style>
         body {
             background-color: #312e2b;
             color: white;
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -20,51 +17,34 @@
             height: 100vh;
             margin: 0;
         }
-        h1 { color: #81b64c; margin-bottom: 5px; }
-        #game-board {
-            background-color: #262421;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-        }
-        #loading-msg {
-            color: #81b64c;
-            font-style: italic;
-        }
-        canvas {
-            border: 2px solid #1a1918;
-            cursor: pointer;
-        }
+        h1 { color: #81b64c; }
+        #loading-msg { color: #81b64c; margin-bottom: 10px; }
+        canvas { border: 2px solid #1a1918; border-radius: 5px; }
     </style>
 </head>
 <body>
 
     <h1>Othello.com</h1>
-    <p id="loading-msg">Initialisation du moteur Python (Veuillez patienter)...</p>
+    <p id="loading-msg">Chargement du plateau...</p>
     
-    <div id="game-board">
-        <canvas id="canvas"></canvas>
-    </div>
+    <canvas id="canvas"></canvas>
 
-<script type="py" config='{"packages": ["pygame-ce"]}'>
+    <script type="py" config='{"packages": ["pygame-ce"]}'>
 import js
 import pygame
 import asyncio
-import sys
 
-# On prévient le navigateur que le chargement est fini
+# On cache le message de chargement quand c'est prêt
 js.document.getElementById("loading-msg").style.display = "none"
 
-# --- CONFIGURATION DU JEU ---
-LARGEUR, HAUTEUR = 400, 450
-VERT_CHESS = (129, 182, 76)
-BLANC = (255, 255, 255)
-NOIR = (0, 0, 0)
-
+# --- CONFIGURATION ---
+LARGEUR, HAUTEUR = 400, 400
 pygame.init()
-fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
-font = pygame.font.SysFont("Arial", 20)
 
+# CETTE LIGNE EST LA PLUS IMPORTANTE POUR LE WEB :
+fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
+
+# Variables du jeu
 plateau = [[0]*8 for _ in range(8)]
 plateau[3][3], plateau[4][4] = 2, 2
 plateau[3][4], plateau[4][3] = 1, 1
@@ -85,19 +65,20 @@ def obtenir_captures(p, ligne, col, couleur):
     return total
 
 def dessiner():
-    pygame.draw.rect(fenetre, (38, 37, 34), (0, 0, 400, 50))
-    pygame.draw.rect(fenetre, (34, 139, 34), (0, 50, 400, 400))
+    # Fond vert Othello
+    fenetre.fill((34, 139, 34))
     for l in range(8):
         for c in range(8):
-            pygame.draw.rect(fenetre, (20, 20, 20), (c*50, l*50+50, 50, 50), 1)
+            # Grillage
+            pygame.draw.rect(fenetre, (20, 20, 20), (c*50, l*50, 50, 50), 1)
+            # Pions
             if plateau[l][c] == 1:
-                pygame.draw.circle(fenetre, NOIR, (c*50+25, l*50+75), 18)
+                pygame.draw.circle(fenetre, (0,0,0), (c*50+25, l*50+25), 20)
             elif plateau[l][c] == 2:
-                pygame.draw.circle(fenetre, BLANC, (c*50+25, l*50+75), 18)
+                pygame.draw.circle(fenetre, (255,255,255), (c*50+25, l*50+25), 20)
+            # Indices
             elif obtenir_captures(plateau, l, c, tour):
-                pygame.draw.circle(fenetre, (100, 100, 100), (c*50+25, l*50+75), 4)
-    txt = f"TOUR: {'NOIR' if tour==1 else 'BLANC'}"
-    fenetre.blit(font.render(txt, True, VERT_CHESS), (150, 15))
+                pygame.draw.circle(fenetre, (60, 110, 60), (c*50+25, l*50+25), 6)
     pygame.display.flip()
 
 async def main():
@@ -107,18 +88,20 @@ async def main():
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
-                if y > 50:
-                    c, l = x // 50, (y - 50) // 50
+                c, l = x // 50, y // 50
+                if 0 <= l < 8 and 0 <= c < 8:
                     caps = obtenir_captures(plateau, l, c, tour)
                     if caps:
                         plateau[l][c] = tour
-                        for rl, rc in caps: plateau[rl][rc] = tour
+                        for rl, rc in caps:
+                            plateau[rl][rc] = tour
                         tour = 2 if tour == 1 else 1
-        await asyncio.sleep(0)
+        
+        # Très important pour ne pas bloquer le navigateur
+        await asyncio.sleep(0.01)
 
+# Lancement de la boucle
 asyncio.ensure_future(main())
     </script>
 </body>
 </html>
-
-
