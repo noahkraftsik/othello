@@ -1,1 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Othello.com</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/py-script.css" />
+    <script defer src="https://pyscript.net/latest/py-script.js"></script>
+    <style>
+        body { background-color: #312e2b; color: white; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; }
+        #loading-msg { color: #81b64c; font-weight: bold; margin-top: 20px; }
+        canvas { border: 5px solid #1a1918; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Othello.com</h1>
+    <div id="loading-msg">Lancement du jeu... (Sois patient, ça charge)</div>
 
+    <py-config>
+        packages = ["pygame-ce"]
+    </py-config>
+
+    <py-script>
+import pygame
+import asyncio
+import js
+
+async def main():
+    pygame.init()
+    L = 400
+    screen = pygame.display.set_mode((L, L))
+    js.document.getElementById("loading-msg").style.display = "none"
+
+    board = [[0]*8 for _ in range(8)]
+    board[3][3], board[4][4] = 2, 2
+    board[3][4], board[4][3] = 1, 1
+    turn = 1
+
+    def get_moves(p, r, c, color):
+        if p[r][c] != 0: return []
+        opp = 2 if color == 1 else 1
+        dirs = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
+        total = []
+        for dr, dc in dirs:
+            nr, nc = r+dr, c+dc
+            path = []
+            while 0<=nr<8 and 0<=nc<8 and p[nr][nc] == opp:
+                path.append((nr, nc))
+                nr+=dr; nc+=dc
+            if 0<=nr<8 and 0<=nc<8 and p[nr][nc] == color:
+                total.extend(path)
+        return total
+
+    while True:
+        screen.fill((34, 139, 34)) 
+        for r in range(8):
+            for c in range(8):
+                pygame.draw.rect(screen, (20,20,20), (c*50, r*50, 50, 50), 1)
+                if board[r][c] == 1:
+                    pygame.draw.circle(screen, (0,0,0), (c*50+25, r*50+25), 20)
+                elif board[r][c] == 2:
+                    pygame.draw.circle(screen, (255,255,255), (c*50+25, r*50+25), 20)
+                elif get_moves(board, r, c, turn):
+                    pygame.draw.circle(screen, (50, 90, 50), (c*50+25, r*50+25), 5)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = event.pos
+                c, r = x//50, y//50
+                if 0<=r<8 and 0<=c<8:
+                    caps = get_moves(board, r, c, turn)
+                    if caps:
+                        board[r][c] = turn
+                        for cr, cc in caps: board[cr][cc] = turn
+                        turn = 2 if turn == 1 else 1
+        
+        pygame.display.flip()
+        await asyncio.sleep(0.02)
+
+asyncio.ensure_future(main())
+    </py-script>
+</body>
+</html>
