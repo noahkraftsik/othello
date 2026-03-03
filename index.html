@@ -8,14 +8,13 @@
     <style>
         body { background-color: #312e2b; color: white; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; }
         #loading-msg { color: #81b64c; font-weight: bold; padding: 20px; }
-        canvas { border: 5px solid #1a1918; border-radius: 8px; background-color: #262421; }
+        /* C'est ici que Pygame va créer le canvas */
+        canvas { border: 5px solid #1a1918; border-radius: 8px; margin-top: 20px; }
     </style>
 </head>
 <body>
     <h1>Othello.com</h1>
-    <div id="loading-msg">Préparation de Pygame... (Patientez environ 20s)</div>
-    
-    <div id="container"></div>
+    <div id="loading-msg">Le jeu charge... (environ 20 secondes)</div>
 
     <py-config>
         packages = ["pygame-ce"]
@@ -24,46 +23,45 @@
     <py-script>
 import pygame
 import asyncio
-from pyodide.ffi import create_proxy
-
-# On initialise pygame
-pygame.init()
-L = 400
-# On force l'affichage dans le container
-screen = pygame.display.set_mode((L, L))
-pygame.display.set_caption("Othello")
-
-# Nettoyage de l'interface
 import js
-js.document.getElementById("loading-msg").style.display = "none"
-
-board = [[0]*8 for _ in range(8)]
-board[3][3], board[4][4] = 2, 2
-board[3][4], board[4][3] = 1, 1
-turn = 1
-
-def get_moves(p, r, c, color):
-    if p[r][c] != 0: return []
-    opp = 2 if color == 1 else 1
-    dirs = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
-    total = []
-    for dr, dc in dirs:
-        nr, nc = r+dr, c+dc
-        path = []
-        while 0<=nr<8 and 0<=nc<8 and p[nr][nc] == opp:
-            path.append((nr, nc))
-            nr+=dr; nc+=dc
-        if 0<=nr<8 and 0<=nc<8 and p[nr][nc] == color:
-            total.extend(path)
-    return total
 
 async def main():
-    global turn
+    # Initialisation
+    pygame.init()
+    L = 400
+    screen = pygame.display.set_mode((L, L))
+    
+    # Cacher le message de chargement
+    js.document.getElementById("loading-msg").style.display = "none"
+
+    # 0=vide, 1=noir, 2=blanc
+    board = [[0]*8 for _ in range(8)]
+    board[3][3], board[4][4] = 2, 2
+    board[3][4], board[4][3] = 1, 1
+    turn = 1
+
+    def get_moves(p, r, c, color):
+        if p[r][c] != 0: return []
+        opp = 2 if color == 1 else 1
+        dirs = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
+        total = []
+        for dr, dc in dirs:
+            nr, nc = r+dr, c+dc
+            path = []
+            while 0<=nr<8 and 0<=nc<8 and p[nr][nc] == opp:
+                path.append((nr, nc))
+                nr+=dr; nc+=dc
+            if 0<=nr<8 and 0<=nc<8 and p[nr][nc] == color:
+                total.extend(path)
+        return total
+
     while True:
-        screen.fill((34, 139, 34))
+        screen.fill((34, 139, 34)) # Vert Othello
         for r in range(8):
             for c in range(8):
                 pygame.draw.rect(screen, (20,20,20), (c*50, r*50, 50, 50), 1)
+                if board[r][r] == 0: # Correction d'affichage
+                    pass
                 if board[r][c] == 1:
                     pygame.draw.circle(screen, (0,0,0), (c*50+25, r*50+25), 20)
                 elif board[r][c] == 2:
@@ -85,12 +83,8 @@ async def main():
         pygame.display.flip()
         await asyncio.sleep(0.02)
 
-# Lancer la boucle
+# Lancer la fonction
 asyncio.ensure_future(main())
     </py-script>
 </body>
 </html>
-    </script>
-</body>
-</html>
-
